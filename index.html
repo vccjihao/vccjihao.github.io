@@ -91,6 +91,46 @@
 		</div>
 	</div><!--container-narrow-->
 
+	<div id="course-chat" style="max-width:420px;border:1px solid #ccc;border-radius:8px;padding:10px;font-family:sans-serif">
+  <div id="log" style="height:240px;overflow:auto"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <input id="msg" placeholder="Ask about the course…" style="flex:1;padding:8px">
+    <button id="send">Send</button>
+  </div>
+</div>
+<script>
+const WEBHOOK_URL = "https://YOUR-N8N/webhook/course-bot";
+const log = document.getElementById('log');
+const msg = document.getElementById('msg');
+const send = document.getElementById('send');
+
+function append(role, text){
+  const div = document.createElement('div');
+  div.style.margin = '6px 0';
+  div.innerHTML = `<b>${role}:</b> ${text}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+send.onclick = async () => {
+  const q = msg.value.trim();
+  if(!q) return;
+  append('You', q);
+  msg.value = '';
+  try{
+    const r = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ userId: 'student-123', message: q })
+    });
+    const j = await r.json();
+    append('TA', j.answer || '(no answer)');
+  }catch(e){
+    append('TA', 'Sorry—something went wrong.');
+  }
+};
+</script>
+
 
 	<script src="assets/js/jquery.js"></script>
 	<script src="assets/js/bootstrap.js"></script>
