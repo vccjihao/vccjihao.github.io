@@ -91,13 +91,14 @@
 		</div>
 	</div><!--container-narrow-->
 
-	<div id="course-chat" style="max-width:420px;border:1px solid #ccc;border-radius:8px;padding:10px;font-family:sans-serif">
+<div id="course-chat" style="max-width:420px;border:1px solid #ccc;border-radius:8px;padding:10px;font-family:sans-serif">
   <div id="log" style="height:240px;overflow:auto"></div>
   <div style="display:flex;gap:8px;margin-top:8px">
     <input id="msg" placeholder="Ask about the course…" style="flex:1;padding:8px">
     <button id="send">Send</button>
   </div>
 </div>
+
 <script>
 const WEBHOOK_URL = "https://vccjihao.app.n8n.cloud/webhook/course-bot";
 const log = document.getElementById('log');
@@ -112,24 +113,55 @@ function append(role, text){
   log.scrollTop = log.scrollHeight;
 }
 
-send.onclick = async () => {
+async function sendMessage(){
   const q = msg.value.trim();
   if(!q) return;
   append('You', q);
   msg.value = '';
+  send.disabled = true;
+
   try{
     const r = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      mode: 'cors', // explicit
+      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
       body: JSON.stringify({ userId: 'student-123', message: q })
     });
-    const j = await r.json();
-    append('TA', j.answer || '(no answer)');
+
+    // Try to parse JSON; if that fails, fall back to text
+    let bodyText = '';
+    let data = null;
+    try {
+      data = await r.clone().json();
+    } catch (e) {
+      bodyText = await r.text();
+    }
+
+    if (!r.ok) {
+      append('TA', `Server error ${r.status}: ${r.statusText}${bodyText ? ' — ' + bodyText : ''}`);
+      return;
+    }
+
+    // Prefer JSON.answer; otherwise show raw text; otherwise note empty
+    const answer =
+      (data && (data.answer ?? data.message ?? data.text)) ??
+      (bodyText || '(no answer in response)');
+
+    append('TA', String(answer));
   }catch(e){
-    append('TA', 'Sorry—something went wrong.');
+    // Most CORS failures land here with a TypeError
+    append('TA', `Sorry—request failed (${e?.message || e}). Possible CORS or network issue.`);
+  }finally{
+    send.disabled = false;
   }
-};
+}
+
+send.onclick = sendMessage;
+msg.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') sendMessage();
+});
 </script>
+
 
 	<script src="assets/js/jquery.js"></script>
 	<script src="assets/js/bootstrap.js"></script>
