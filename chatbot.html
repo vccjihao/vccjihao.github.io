@@ -5,12 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Floating Chatbot</title>
 <style>
-  body { font-family: sans-serif; margin: 0; }
+  body { font-family: sans-serif; margin: 0; height: 2000px; }
 
+  /* Floating chatbot box */
   #chatbot {
-    position: absolute;
-    bottom: 100px;
-    right: 40px;
+    position: fixed; /* stay visible on scroll */
+    bottom: 90px;
+    right: 30px;
     width: 320px;
     height: 420px;
     background: #fff;
@@ -36,10 +37,11 @@
     overflow-y: auto;
   }
 
+  /* Floating button */
   #chatbot-button {
-    position: fixed;
+    position: fixed; /* fixed to viewport */
     bottom: 20px;
-    right: 20px;
+    right: 30px;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -51,46 +53,58 @@
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    z-index: 10000;
+    transition: background 0.2s;
+  }
+
+  #chatbot-button:hover {
+    background: #005ecc;
   }
 </style>
 </head>
 <body>
 
+<!-- Chatbot container -->
 <div id="chatbot">
   <div id="chatbot-header">Chatbot 💬</div>
   <div id="chatbot-body">
-    👋 Hi! I’m your chatbot.
-    <br><br>
-    You can drag me anywhere.
+    👋 Hi! I’m always here — even if you scroll!
   </div>
 </div>
 
+<!-- Floating button -->
 <div id="chatbot-button">💬</div>
 
 <script>
   const bot = document.getElementById('chatbot');
   const button = document.getElementById('chatbot-button');
 
+  // Toggle chatbot
   button.onclick = () => {
     bot.style.display = bot.style.display === 'flex' ? 'none' : 'flex';
   };
 
-  // Draggable behavior
+  // Optional: make chatbot draggable within viewport
   let isDragging = false, offsetX, offsetY;
   const header = document.getElementById('chatbot-header');
 
   header.addEventListener('mousedown', e => {
     isDragging = true;
-    offsetX = e.clientX - bot.offsetLeft;
-    offsetY = e.clientY - bot.offsetTop;
+    offsetX = e.clientX - bot.getBoundingClientRect().left;
+    offsetY = e.clientY - bot.getBoundingClientRect().top;
   });
 
   document.addEventListener('mouseup', () => isDragging = false);
 
   document.addEventListener('mousemove', e => {
     if (isDragging) {
-      bot.style.left = e.clientX - offsetX + 'px';
-      bot.style.top = e.clientY - offsetY + 'px';
+      e.preventDefault();
+      const newLeft = e.clientX - offsetX;
+      const newTop = e.clientY - offsetY;
+      bot.style.left = newLeft + 'px';
+      bot.style.top = newTop + 'px';
+      bot.style.right = 'auto';
+      bot.style.bottom = 'auto';
     }
   });
 </script>
