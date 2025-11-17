@@ -98,38 +98,32 @@
     <button id="send">Send</button>
   </div>
 </div>
+
 <script>
 const WEBHOOK_URL = "https://vccjihao.app.n8n.cloud/webhook/course-bot";
-const log = document.getElementById('log');
-const msg = document.getElementById('msg');
-const send = document.getElementById('send');
-
-function append(role, text){
-  const div = document.createElement('div');
-  div.style.margin = '6px 0';
-  div.innerHTML = `<b>${role}:</b> ${text}`;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
+// ...rest stays the same...
 send.onclick = async () => {
   const q = msg.value.trim();
   if(!q) return;
   append('You', q);
   msg.value = '';
-  try{
-    const r = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ userId: 'student-123', message: q })
-    });
-    const j = await r.json();
-    append('TA', j.answer || '(no answer)');
-  }catch(e){
-    append('TA', 'Sorry—something went wrong.');
+  try {
+	const r = await fetch(WEBHOOK_URL, {
+	  method: 'POST',
+	  headers: {'Content-Type':'application/json'},
+	  body: JSON.stringify({ userId: 'student-123', message: q })
+	});
+	const text = await r.text();
+	console.log('HTTP', r.status, text);
+	if (!r.ok) throw new Error('HTTP '+r.status);
+	let j = {};
+	try { j = JSON.parse(text); } catch { j = { ok:false, answer:text }; }
+	append('TA', j.answer || '(no answer)');
   }
 };
 </script>
+
+	
 
 
 	<script src="assets/js/jquery.js"></script>
