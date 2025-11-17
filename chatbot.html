@@ -1,113 +1,348 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Floating Chatbot</title>
+<!-- Floating Chat: Button + Panel -->
 <style>
-  body { font-family: sans-serif; margin: 0; height: 2000px; }
-
-  /* Floating chatbot box */
-  #chatbot {
-    position: fixed; /* stay visible on scroll */
-    bottom: 90px;
-    right: 30px;
-    width: 320px;
-    height: 420px;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-    z-index: 9999;
+  :root {
+    --chat-accent: #0078ff;
+    --chat-bg: #ffffff;
+    --chat-text: #111;
+    --chat-muted: #666;
+    --chat-shadow: 0 12px 30px rgba(0,0,0,.18);
+    --chat-radius: 16px;
+    --chat-z: 99999;
   }
 
-  #chatbot-header {
-    background: #0078ff;
-    color: white;
-    padding: 10px;
-    cursor: move;
-    font-weight: bold;
-  }
-
-  #chatbot-body {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-  }
-
-  /* Floating button */
-  #chatbot-button {
-    position: fixed; /* fixed to viewport */
-    bottom: 20px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
+  /* Floating toggle button */
+  #chat-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    background: #0078ff;
-    color: white;
-    font-size: 28px;
+    background: var(--chat-accent);
+    color: #fff;
+    font-size: 26px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--chat-shadow);
+    cursor: pointer;
+    border: 0;
+    z-index: var(--chat-z);
+    transition: transform .15s ease, opacity .2s ease, box-shadow .2s ease;
+  }
+  #chat-fab:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(0,0,0,.22); }
+  #chat-fab:active { transform: translateY(0); }
+
+  /* Panel */
+  #chat-panel {
+    position: fixed; /* stays on scroll */
+    width: min(92vw, 360px);
+    height: 520px;
+    background: var(--chat-bg);
+    color: var(--chat-text);
+    border-radius: var(--chat-radius);
+    box-shadow: var(--chat-shadow);
+    overflow: hidden;
+    z-index: calc(var(--chat-z) + 1);
+    right: 24px; bottom: 92px; /* default anchor */
+    display: none;             /* restored from localStorage */
+  }
+
+  /* Header (drag handle) */
+  #chat-head {
+    background: var(--chat-accent);
+    color: #fff;
+    padding: 12px 14px;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    z-index: 10000;
-    transition: background 0.2s;
+    gap: 10px;
+    user-select: none;
+    cursor: move; /* drag handle */
+  }
+  #chat-title { flex: 1; }
+  #chat-close {
+    background: transparent; color: #fff; border: 0; font-size: 20px; cursor: pointer;
   }
 
-  #chatbot-button:hover {
-    background: #005ecc;
+  /* Messages area */
+  #chat-log {
+    height: calc(520px - 56px - 64px); /* total - header - input row */
+    overflow: auto;
+    padding: 12px;
+    background: #f7f9fc;
+  }
+
+  .bubble {
+    max-width: 80%;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .me   { margin-left: auto; background: #e7f2ff; border-top-right-radius: 4px; }
+  .bot  { margin-right: auto; background: #fff;    border-top-left-radius: 4px; }
+
+  .meta { font-size: 12px; color: var(--chat-muted); margin-top: 2px; }
+
+  /* Typing indicator */
+  .typing {
+    display: inline-block; width: 50px; height: 16px;
+    background:
+      radial-gradient(circle, #cbd5e1 40%, transparent 41%) 0% 50%/16px 16px,
+      radial-gradient(circle, #cbd5e1 40%, transparent 41%) 50% 50%/16px 16px,
+      radial-gradient(circle, #cbd5e1 40%, transparent 41%) 100% 50%/16px 16px;
+    background-repeat: no-repeat;
+    animation: bounce 1.2s infinite;
+  }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); }
+  }
+
+  /* Input row */
+  #chat-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    background: #fff;
+    border-top: 1px solid #e6eaf0;
+  }
+  #chat-msg {
+    flex: 1; padding: 10px 12px; border: 1px solid #d7dde6; border-radius: 10px;
+    outline: none;
+  }
+  #chat-send {
+    padding: 10px 14px; background: var(--chat-accent); color: #fff; border: 0; border-radius: 10px; cursor: pointer;
+  }
+  #chat-send[disabled] { opacity: .6; cursor: not-allowed; }
+
+  /* Mobile drag containment (optional improvements happen in JS too) */
+  @media (max-width: 420px) {
+    #chat-panel { width: calc(100vw - 20px); right: 10px; }
   }
 </style>
-</head>
-<body>
 
-<!-- Chatbot container -->
-<div id="chatbot">
-  <div id="chatbot-header">Chatbot 💬</div>
-  <div id="chatbot-body">
-    👋 Hi! I’m always here — even if you scroll!
+<button id="chat-fab" aria-controls="chat-panel" aria-expanded="false" title="Open chat" aria-label="Open chat">💬</button>
+
+<section id="chat-panel" role="dialog" aria-modal="true" aria-labelledby="chat-title">
+  <header id="chat-head">
+    <div id="chat-title">Course Assistant</div>
+    <button id="chat-close" title="Close (Esc)" aria-label="Close">✕</button>
+  </header>
+
+  <div id="chat-log" aria-live="polite">
+    <!-- bubbles injected here -->
   </div>
-</div>
 
-<!-- Floating button -->
-<div id="chatbot-button">💬</div>
+  <div id="chat-input-row">
+    <input id="chat-msg" type="text" placeholder="Ask about the course…" autocomplete="off" aria-label="Message input">
+    <button id="chat-send">Send</button>
+  </div>
+</section>
 
 <script>
-  const bot = document.getElementById('chatbot');
-  const button = document.getElementById('chatbot-button');
+(function(){
+  // ====== Config ======
+  const WEBHOOK_URL = "https://vccjihao.app.n8n.cloud/webhook/course-bot"; // keep your endpoint
+  const STORAGE_KEY = "floatingChat.state.v1"; // position & open state
+  const REQUEST_TIMEOUT_MS = 15000;
 
-  // Toggle chatbot
-  button.onclick = () => {
-    bot.style.display = bot.style.display === 'flex' ? 'none' : 'flex';
-  };
+  // ====== Elements ======
+  const fab   = document.getElementById('chat-fab');
+  const panel = document.getElementById('chat-panel');
+  const head  = document.getElementById('chat-head');
+  const closeBtn = document.getElementById('chat-close');
+  const log   = document.getElementById('chat-log');
+  const input = document.getElementById('chat-msg');
+  const send  = document.getElementById('chat-send');
 
-  // Optional: make chatbot draggable within viewport
-  let isDragging = false, offsetX, offsetY;
-  const header = document.getElementById('chatbot-header');
+  // ====== Helpers ======
+  function saveState(extra = {}) {
+    const rect = panel.getBoundingClientRect();
+    const prev = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const state = {
+      open: panel.style.display !== 'none',
+      left: rect.left, top: rect.top,
+      ...prev, ...extra
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
 
-  header.addEventListener('mousedown', e => {
-    isDragging = true;
-    offsetX = e.clientX - bot.getBoundingClientRect().left;
-    offsetY = e.clientY - bot.getBoundingClientRect().top;
+  function loadState() {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    if (typeof s.left === 'number' && typeof s.top === 'number') {
+      // convert to pixels relative to viewport
+      panel.style.left = s.left + "px";
+      panel.style.top  = s.top  + "px";
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+    }
+    if (s.open) openPanel(); else closePanel();
+  }
+
+  function uiOpen(opening) {
+    panel.style.display = opening ? 'block' : 'none';
+    fab.setAttribute('aria-expanded', String(opening));
+    fab.setAttribute('aria-label', opening ? 'Close chat' : 'Open chat');
+    fab.title = opening ? 'Close chat' : 'Open chat';
+    if (opening) { setTimeout(()=>input.focus(), 0); }
+    saveState({ open: opening });
+  }
+
+  function openPanel(){ uiOpen(true); }
+  function closePanel(){ uiOpen(false); }
+
+  function addBubble(role, text) {
+    const wrap = document.createElement('div');
+    const b = document.createElement('div');
+    b.className = 'bubble ' + (role === 'me' ? 'me' : 'bot');
+    b.textContent = text;
+    wrap.appendChild(b);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function addTyping() {
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble bot';
+    wrap.dataset.typing = '1';
+    const dot = document.createElement('span');
+    dot.className = 'typing';
+    wrap.appendChild(dot);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+    return wrap;
+  }
+
+  function removeTyping(node) {
+    if (node && node.parentNode) node.parentNode.removeChild(node);
+  }
+
+  function networkErrorText(e) {
+    // Many GitHub Pages -> external webhook errors are CORS-related.
+    // Give a friendly message the user understands.
+    const reason = (e && e.message) ? e.message : String(e);
+    if (/Failed to fetch|TypeError/i.test(reason)) {
+      return "Request failed. This may be a CORS or network issue. " +
+             "If this keeps happening, ensure the webhook allows requests from your site origin.";
+    }
+    return "Request failed: " + reason;
+  }
+
+  async function askBackend(message) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    const res = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+      body: JSON.stringify({ userId: 'student-123', message }),
+      signal: controller.signal
+    }).catch((e) => { throw e; })
+      .finally(() => clearTimeout(timer));
+
+    let text = '', data = null;
+    try { data = await res.clone().json(); } catch { text = await res.text(); }
+
+    if (!res.ok) {
+      const detail = text ? ` — ${text.slice(0,200)}` : '';
+      throw new Error(`Server error ${res.status}: ${res.statusText}${detail}`);
+    }
+
+    const answer = (data && (data.answer ?? data.message ?? data.text))
+                || (text || '(no answer in response)');
+    return String(answer);
+  }
+
+  async function sendMessage() {
+    const q = (input.value || '').trim();
+    if (!q) return;
+    addBubble('me', q);
+    input.value = '';
+    send.disabled = true;
+
+    const typingNode = addTyping();
+
+    try {
+      const a = await askBackend(q);
+      removeTyping(typingNode);
+      addBubble('bot', a);
+    } catch (e) {
+      removeTyping(typingNode);
+      addBubble('bot', networkErrorText(e));
+    } finally {
+      send.disabled = false;
+      log.scrollTop = log.scrollHeight;
+    }
+  }
+
+  // ====== Events ======
+  fab.addEventListener('click', () => {
+    if (panel.style.display === 'none' || panel.style.display === '') openPanel();
+    else closePanel();
   });
+  closeBtn.addEventListener('click', closePanel);
 
-  document.addEventListener('mouseup', () => isDragging = false);
-
-  document.addEventListener('mousemove', e => {
-    if (isDragging) {
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const newLeft = e.clientX - offsetX;
-      const newTop = e.clientY - offsetY;
-      bot.style.left = newLeft + 'px';
-      bot.style.top = newTop + 'px';
-      bot.style.right = 'auto';
-      bot.style.bottom = 'auto';
+      sendMessage();
+    } else if (e.key === 'Escape') {
+      closePanel();
     }
   });
-</script>
+  send.addEventListener('click', sendMessage);
 
-</body>
-</html>
+  // Dragging (header as handle), constrained to viewport
+  let dragging = false, dx = 0, dy = 0;
+  head.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true;
+    const rect = panel.getBoundingClientRect();
+    dx = e.clientX - rect.left;
+    dy = e.clientY - rect.top;
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mouseup', () => {
+    if (dragging) { dragging = false; document.body.style.userSelect = ''; saveState(); }
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    let left = e.clientX - dx;
+    let top  = e.clientY - dy;
+    // clamp so panel stays on-screen
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    top  = Math.max(8, Math.min(vh - h - 8, top));
+    panel.style.left = left + 'px';
+    panel.style.top  = top  + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  });
+
+  // Keyboard: close on Esc globally when open
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panel.style.display !== 'none') closePanel();
+  });
+
+  // Initial greeting (only once per load)
+  function greetOnce() {
+    if (!sessionStorage.getItem('chat.greeted')) {
+      addBubble('bot', "👋 Hi! Ask me anything about the course.");
+      sessionStorage.setItem('chat.greeted', '1');
+    }
+  }
+
+  // Mount
+  closePanel();    // start closed; loadState may reopen it
+  loadState();     // restores position + open state
+  greetOnce();
+})();
+</script>
