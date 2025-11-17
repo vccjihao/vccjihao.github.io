@@ -3,9 +3,9 @@
   const cfg = Object.assign(
     {
       endpoint: "https://vccjihao.app.n8n.cloud/webhook/course-bot", // your endpoint
-      title: "Course Assistant",
+      title: "TA/RA",
       storageKey: "chatbot_widget_state_v1",
-      greeting: "👋 Hi! Ask me anything about the course.",
+      greeting: "👋 Hi! Feel free to ask me about my courses and research.",
       theme: "auto",
       position: { bottom: 20, right: 20 },
       maxHeight: 520,
