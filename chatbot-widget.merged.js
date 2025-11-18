@@ -134,7 +134,35 @@
   // --- Elements ------------------------------------------------------------
   const fab = document.createElement("button");
   fab.className = "fab";
-  fab.innerHTML = "💬";
+  //fab.innerHTML = "💬";
+  fab.innerHTML = `
+  <div style="
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+  ">
+    <span style="
+      font-size: 30px;
+      position: relative;
+      top: -5px; /* moves 💬 up a bit for better balance */
+    ">💬</span>
+    <span style="
+      position: absolute;
+      bottom: 6px;
+      right: 9px;
+      background: #154734;   /* CPP Green */
+      color: #ffb81c;        /* CPP Gold */
+      font-weight: 700;
+      font-size: 10px;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    ">TA/RA</span>
+  </div>
+`;
   const panel = document.createElement("section");
   panel.className = "panel";
   const header = document.createElement("div");
